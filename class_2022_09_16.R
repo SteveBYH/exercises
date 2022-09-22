@@ -1,3 +1,4 @@
+
 ## Example
 
 list(
@@ -7,8 +8,6 @@ list(
   (function(l) {
       lm(as.formula(l$f), data=l$d)
   })
-
-
 
 library(nycflights13)
 library(dplyr)
