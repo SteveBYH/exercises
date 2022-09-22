@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 ## Example
 
+=======
+>>>>>>> 2b0224ab04a30e78e2ba9963c37ef3b9f1435993
 list(
   f = "y~x",
   d = data.frame(x=1:3, y=1:3)
@@ -7,6 +10,7 @@ list(
   (function(l) {
       lm(as.formula(l$f), data=l$d)
   })
+<<<<<<< HEAD
 
 
 library(nycflights13)
@@ -85,3 +89,5 @@ flights %>%
   group_by(date) %>%
   summarize(avg_arr_delay = mean(arr_delay, na.rm=TRUE), .groups = "drop") %>%
   top_n(-1)
+=======
+>>>>>>> 2b0224ab04a30e78e2ba9963c37ef3b9f1435993
