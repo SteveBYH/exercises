@@ -6,7 +6,8 @@ library(palmerpenguins)
 penguins %>%
   filter(!is.na(sex)) %>%
   mutate(
-    sex = forcats::as_factor(sex)
+    #sex = forcats::as_factor(sex)
+    sex = factor(sex, levels = c("male", "female"))
   ) %>%
   ggplot(
     aes(
@@ -17,7 +18,7 @@ penguins %>%
     geom_density(alpha=0.5, color=NA) +
     facet_wrap(~sex, ncol=1) +
     labs(
-      color = "Species",
+      fill = "Species",
       x = "Body mass (g)",
       y = ""
     )
