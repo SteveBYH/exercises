@@ -1,0 +1,43 @@
+---
+title: "Homework 4 - La Quinta is Spanish for next to Denny's"
+format: 
+  html:
+    self-contained: true
+author:
+- teammate 1
+- teammate 2
+- teammate 3
+- teammate 4
+---
+
+
+## Task 1 - Scraping Denny's
+
+<!-- Detail your approach for scraping restaurant data from https://locations.dennys.com/ -->
+
+
+<br />
+
+## Task 2 - Scraping LQ
+
+<!-- Detail your approach for scraping hotel data from https://www.wyndhamhotels.com/laquinta/locations -->
+
+
+<br />
+
+
+
+## Task 3 - Distance Analysis
+
+```{r load_data}
+dennys = readRDS("data/dennys.rds")
+lq = readRDS("data/lq.rds")
+```
+
+<!-- Detail your statistical analysis of the pairwise distance between Denny's and LQ's locations -->
+
+```{r analysis}
+```
+
+
+<br />

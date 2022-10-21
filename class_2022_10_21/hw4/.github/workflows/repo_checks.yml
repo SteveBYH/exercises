@@ -1,0 +1,69 @@
+on: workflow_dispatch
+name: Repo Checks
+jobs:
+  check_allowed_files:
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/sta523-fa22/sta523-base:latest
+    timeout-minutes: 3
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+    - name: Check Files
+      run: |
+        checklist::quit_on_failure({
+          checklist::check_allowed_files(
+            c("hw4.qmd", "hw4.Rproj", "README.*", 
+              "get_dennys.R", "parse_dennys.R", "get_lq.R", "parse_lq.R", 
+              "Makefile", "hedberg.jpg")
+          )
+        })
+      shell: Rscript {0}
+  check_renders:
+    needs: check_allowed_files
+    runs-on: self-hosted
+    container:
+      image: ghcr.io/sta523-fa22/sta523-base:latest
+    timeout-minutes: 30
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+
+    - name: Install Missing Packages
+      run: |
+        checklist::install_missing_pkgs(dir = "./")
+      shell: Rscript {0}
+
+    - name: Run Makefile
+      run: |
+        make
+
+    - name: List files
+      run: |
+        ls -la
+
+    - name: Check Renders
+      run: |
+        checklist::check_qmd_renders("hw4.qmd")
+      shell: Rscript {0}
+    
+    - name: Archive html
+      uses: actions/upload-artifact@master
+      with:
+        name: hw4-html
+        path: hw4.html
+
+    - name: Run make clean
+      run: |
+        make clean
+
+    - name: Check Files (again)
+      run: |
+        checklist::quit_on_failure({
+          checklist::check_allowed_files(
+            c("hw4.qmd", "hw4.Rproj", "README.*", 
+              "get_dennys.R", "parse_dennys.R", "get_lq.R", "parse_lq.R", 
+              "Makefile", "hedberg.jpg")
+          )
+        })
+      shell: Rscript {0}
