@@ -64,7 +64,7 @@ output$plot = renderPlot({
   d() %>%
     mutate(
       distribution = forcats::as_factor(distribution)
-    )
+    ) %>%
     ggplot(aes(x=p, y=density, color=distribution)) +
       geom_line(size=1.5) +
       geom_ribbon(aes(ymax=density, fill=distribution), ymin=0, alpha=0.5)
