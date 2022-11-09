@@ -1,0 +1,132 @@
+library(tidyverse)
+library(shiny)
+library(truncnorm)
+library(bslib)
+library(thematic)
+
+thematic_shiny()
+
+shinyApp(
+  ui = fluidPage(
+    theme = bs_theme(),
+    title = "Beta-Binomial",
+    titlePanel("Beta-Binomial Visualizer"),
+    sidebarLayout(
+      sidebarPanel = sidebarPanel(
+        h4("Data:"),
+        sliderInput("x", "# of heads", min=0, max=100, value=7),
+        sliderInput("n", "# of flips", min=0, max=100, value=10),
+        h4("Prior:"),
+        selectInput("prior", "Select prior", choices = c("Beta"="beta", "Trunc Norm"="tnorm")),
+        uiOutput("prior_params"),
+        h4("ABC:"),
+        numericInput("nsim", "# of simulations", value = 10000),
+        numericInput("nmin", "Min # of posterior draws", value = 1000)
+      ),
+      mainPanel = mainPanel(
+        plotOutput("plot"),
+        textOutput("summary")
+      )
+    )
+  ),
+  server = function(input, output, session) {
+    bs_themer()
+    
+    observe({
+      updateSliderInput(session, "x", max = input$n)
+    }) %>%
+      bindEvent(input$n)
+    
+    observe({
+      if (input$prior == "beta") {
+        output$prior_params = renderUI({
+          list(
+            numericInput("alpha", "Prior # of heads", min=0, value=5),
+            numericInput("beta", "Prior # of tails", min=0, value=5)
+          )
+        })
+      } else if (input$prior == "tnorm") {
+        output$prior_params = renderUI({
+          list(
+            numericInput("mean", "Prior mean", min=0, max=1, value=0.5),
+            numericInput("sd", "Prior sd", min=0, value=0.1)
+          )
+        })
+      } else {
+        output$prior_params = renderUI({})
+      }
+    })
+    
+    output$summary = renderText({
+      glue::glue(
+        "Ran {input$nsim} generative simulations and obtained {length(post_abc())} ",
+        "posterior samples.\n Efficency of {100*length(post_abc()) / input$nsim}%."
+      )
+    })
+    
+    
+    prior_abc = reactive({
+      if (input$prior == "beta") {
+        req(input$alpha, input$beta)
+        rbeta(input$nsim, input$alpha, input$beta)
+      } else if (input$prior == "tnorm") {
+        req(input$mean, input$sd)
+        truncnorm::rtruncnorm(n = input$nsim, a=0, b=1, mean = input$mean, sd = input$sd)
+      } else {
+        stop()
+      }
+    })
+    
+    sims_abc = reactive({
+      rbinom(input$nsim, size = input$n, prob = prior_abc())
+    })
+    
+    post_abc = reactive({
+      req(input$nsim, input$nmin, input$alpha, input$beta)
+      prior_abc()[ sims_abc() == input$x ]
+    })
+    
+    d_abc = reactive({
+      post_dens = density(post_abc())
+      prior_dens = density(prior_abc())
+      
+      bind_rows(
+        tibble(
+          p = prior_dens$x,
+          density = prior_dens$y,
+          distribution = "prior"
+        ),
+        tibble(
+          distribution = "likelihood",
+          p = seq(0, 1, length.out = 1000)
+        ) %>%
+          mutate(
+            density = dbinom(input$x, size = input$n, prob = p),
+            density = density / sum(density / n())
+          ),
+        tibble(
+          p = post_dens$x,
+          density = post_dens$y,
+          distribution = "posterior (ABC)"
+        )
+      )
+    })
+    
+    
+    output$plot = renderPlot({
+      validate(
+        need(length(post_abc()) > input$nmin, "Insufficient posterior draws to accurately estimate the density, try increasing the number of simulations!")
+      )
+      
+      bind_rows(
+        d_abc()
+      ) %>%
+        mutate(
+          distribution = forcats::as_factor(distribution)
+        ) %>%
+        ggplot(aes(x=p, y=density, color=distribution)) +
+        geom_line(size=1.5) +
+        geom_ribbon(aes(ymax=density, fill=distribution), ymin=0, alpha=0.5)
+    })
+  }
+)
