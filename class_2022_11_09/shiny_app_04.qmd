@@ -27,9 +27,13 @@ fluidPage(
       h4("Prior:"),
       numericInput("alpha", "Prior # of head", min=0, value=5),
       numericInput("beta", "Prior # of tails", min=0, value=5),
+      h4("ABC:"),
+      numericInput("nsim", "# of simulations", value = 10000),
+      numericInput("nmin", "Min # of posterior draws", value = 1000)
     ),
     mainPanel = mainPanel(
-      plotOutput("plot")
+      plotOutput("plot"),
+      textOutput("summary")
     )
   )
 )
@@ -43,7 +47,34 @@ observe({
 }) %>%
   bindEvent(input$n)
 
-d = reactive({
+output$summary = renderText({
+  glue::glue(
+    "Ran {input$nsim} generative simulations and obtained {length(post_abc())} ",
+    "posterior samples.\n Efficency of {100*length(post_abc()) / input$nsim}%."
+  )
+})
+
+post_abc = reactive({
+  req(input$nsim, input$nmin, input$alpha, input$beta)
+  
+  prior = rbeta(input$nsim, input$alpha, input$beta)
+  sims = rbinom(input$nsim, size = input$n, prob = prior)
+  post = prior[ sims == input$x ]
+})
+
+d_abc = reactive({
+  post_dens = density(post_abc())
+  
+  tibble(
+    p = post_dens$x,
+    density = post_dens$y,
+    distribution = "posterior (ABC)"
+  )
+})
+
+d_conj = reactive({
+  req(input$alpha, input$beta)
+  
   tibble(
     p = seq(0, 1, length.out = 1000)
   ) %>%
@@ -57,14 +88,20 @@ d = reactive({
       cols = -p,
       names_to = "distribution",
       values_to = "density"
-    ) 
+    )
 })
 
 output$plot = renderPlot({
-  d() %>%
+  validate(
+    need(length(post_abc()) > input$nmin, "Insufficient posterior draws to accurately estimate the density, try increasing the number of simulations!")
+  )
+  
+  bind_rows(
+    d_conj(), d_abc()
+  ) %>%
     mutate(
       distribution = forcats::as_factor(distribution)
-    )
+    ) %>%
     ggplot(aes(x=p, y=density, color=distribution)) +
       geom_line(size=1.5) +
       geom_ribbon(aes(ymax=density, fill=distribution), ymin=0, alpha=0.5)
